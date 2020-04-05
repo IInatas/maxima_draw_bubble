@@ -17,7 +17,10 @@ http://www.gnu.org/copyleft/gpl.html */
 
 /* histogram_ext */
 
-/* ================== small change list for _V8 --> _V9 =====================
+/* ================== small change list for _V8 --> _V10 =====================
+added a new histogram based draw type to make it easier 		    ;    30.03.2020 M^2
+	to draw histogram results as bubble plots using histogram_ext
+added a new draw type named bubble to make bubble plots of various formes   ;    28.03.2020 M^2
 changed struct according to Robert's comments                               ;    25.06.2016 M^2
 Update function according to descriptive.mac from Mario Rodriguez Riotorto  ;    06.07.2016 M^2
 --> implement wx(draw2d) function, improved loading of packages,

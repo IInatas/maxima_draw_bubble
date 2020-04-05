@@ -1,0 +1,20 @@
+load("histogram_V10.mac")$
+
+STRCUT : histogram_ext(
+    makelist( random(30), 200 ) ,
+    makelist( [i,i+DELTA], i, 0, 30, DELTA )
+)   ,	DELTA=2 	$
+
+draw2d(
+    histogram_bubbles(
+	STRCUT , 'mass, bubble_scale=17, bubble_fill=green ),
+    histogram_bubbles(
+	STRCUT2, 'mass, bubble_x=2, bubble_scale=17, bubble_fill=FANCY ),
+    xtics={["HISTROGRAM_{No1}",1],["HISTROGRAM_{No2}",2]},
+    xrange=[0.5,2.5],
+    grid=true
+)   ,   STRCUT2 = histogram_ext(
+		makelist( random(30), 200 ) ,
+		makelist( [i,i+1], i, 0, 30, 1 )    )
+    ,   FANCY   = makelist( printf(false,"#~2,'0x~2,'0x~2,'0x~2,'0x",i*5+60,100,100,5), i, 0, 30, 1 ) $
+
