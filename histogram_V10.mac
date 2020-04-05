@@ -1,0 +1,489 @@
+/*               COPYRIGHT NOTICE
+
+Copyright (C) 2020 Marcus Menzel
+
+This program is free software; you can redistribute
+it and/or modify it under the terms of the
+GNU General Public License as published by
+the Free Software Foundation; either version 2 
+of the License, or (at your option) any later version. 
+
+This program is distributed in the hope that it
+will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See the 
+GNU General Public License for more details at
+http://www.gnu.org/copyleft/gpl.html */
+
+/* histogram_ext */
+
+/* ================== small change list for _V8 --> _V9 =====================
+changed struct according to Robert's comments                               ;    25.06.2016 M^2
+Update function according to descriptive.mac from Mario Rodriguez Riotorto  ;    06.07.2016 M^2
+--> implement wx(draw2d) function, improved loading of packages,
+    improved code with parameter handling */
+
+put('histogram_ext, 1, 'version) $
+
+if not get('draw,       'version)  then load("draw")            $
+
+if not get('descriptive,'version)  then load("descriptive")     $
+
+/* check for definition of structure in global structures list, otherwise define it */
+
+if not member (histogram_structure, map (op, structures)) then 
+	defstruct	(  histogram_structure(
+				            bounds, distance, count, mass_fraction, area_fraction, service
+              			)
+	)$
+
+histogram_ext(LISTE, [nclasses]):=
+block(  [ 
+            area_all        : 0                         ,    
+            h_struct      
+        ],
+
+/* # check if LIST is processable, here difference to descriptive.mac --> listify LIST # */    
+        if not listoflistsp(LISTE) then
+            if matrixp(LISTE) and rank(LISTE)>1 then
+                error("histogram_ext: In contrast to other descriptive functions only matrix with rank=1 is possible",LISTE)
+            elseif matrixp(LISTE) and list_matrix_entries(LISTE) < 2 then
+                error("histogram_ext: matrix is too short",LISTE)
+            elseif matrixp(LISTE) and length(LISTE) > 1 then
+                LISTE       :   listify(transpose(LISTE))
+            elseif matrixp(LISTE) then
+                LISTE       :   listify(LISTE),
+
+
+/* # case with simple splitting of the list in approximated nclasses bins # */
+        if nclasses = [] then (
+            block([
+                distance    :   0                       ,
+                quantil_1   :   quantile(LISTE, 1/4)    ,
+                quantil_3   :   quantile(LISTE, 3/4)    ],
+            /* 
+                Estimation of number of classes after Freedman und Diaconis  
+                "n the histogram as a density estimator: L_2 theory. "
+                In: Zeitschrift f??ahrscheinlichkeitstheorie und verwandte Gebiete. 
+                Band 57, Nr. 4, 1981, S. 453?76, doi:10.1007/BF01025868
+            */
+            distance    	:   2* ( quantil_3 - quantil_1 ) / length(LISTE)^(1/3)  		,
+            nclasses    	:   floor( ( lmax(LISTE) - lmin(LISTE) ) / distance )   		,
+            print("approximated number of bins: ", nclasses)
+            )
+        ) 
+        else (
+            nclasses    	:   first(nclasses)
+        ),
+
+/* # symmetric case with simple splitting of the list in nclasses bins # */
+        if atom(nclasses)=true then ( 
+            block(  [
+                li_min, li_max, li_lgth, a, b, distance, class, h_struct			        ],
+            li_min  :   lmin(LISTE)                 										,
+            li_max  :   lmax(LISTE)                 										,
+            li_lgth :   length(LISTE)               										,
+            a       :   []                          										,
+            b       :   []                          										,
+            distance:   (li_max - li_min)/(nclasses)										,
+            class   :   makelist(0,a,1,(nclasses+1))										,
+            for a:1 thru li_lgth step 1 do (
+                 block( []  ,
+                    b       : floor(  ((LISTE[a] - li_min) / distance)+1 )					,
+					class[b]:  class[b] + 1   
+                 )  
+            ),
+            class[nclasses] :  class[nclasses+1]+ class[nclasses]                           ,
+            h_struct        : new(  histogram_structure (   
+                                                            makelist([0,0],a,1,nclasses)    ,
+                                                            makelist(distance,a,1,nclasses) ,
+                                                            makelist(0,a,1,nclasses)        ,
+                                                            makelist(0,a,1,nclasses)        ,
+                                                            makelist(0,a,1,nclasses)        ,
+                                                            ['LIST_MIN  = li_min        ,
+                                                             'LIST_MAX  = li_max        , 
+                                                             'CLASS_CNT = li_lgth       , 
+                                                             'CLASS_MIN = 0             , 
+                                                             'CLASS_MAX = 0             , 
+                                                             'CLASS_NO  = nclasses      ]
+                                                        )   
+                                 )																	,
+          for a:1 thru nclasses do(
+                h_struct@bounds[a]   		  :   [ li_min+(a-1)*distance, li_min+(a)*distance ]	,
+                h_struct@distance[a]    	  :   distance                                          ,
+                h_struct@count[a]   	      :   class[a]                			                ,
+                h_struct@mass_fraction[a]	  :   class[a] / li_lgth                                ,
+                h_struct@area_fraction[a]	  :   h_struct@mass_fraction[a] / h_struct@distance[a] 
+            ),
+            h_struct@service[4]     :   'CLASS_MIN = lmin(flatten(args(h_struct@bounds)))       	,
+            h_struct@service[5]     :   'CLASS_MAX = lmax(flatten(args(h_struct@bounds)))       	,
+
+          /* Integral of area_fraction should equal to 1 */
+            area_all                :   lsum(a,a,h_struct@area_fraction)                        	,
+            h_struct@area_fraction  :   map(lambda([a], a / area_all ), h_struct@area_fraction) 	,
+
+            return(h_struct)           
+            )
+        )
+
+/*  # asymmetric case with list containing [lower,upper] border values to describe the bins # */
+        elseif (listp(nclasses)=true  and length(nclasses)>0) then (
+            block(  [
+                        a       :   []                                  ,
+                        b       :   1                                   ,
+                        flag    :   false                               ,
+                        class   :   makelist(0,a,1,length(nclasses))    ,
+                        nc_lgth :   length(nclasses)                    ,
+                        li_lgth :   length(LISTE)                       ,
+                        li_min  :   lmin(LISTE)                         ,
+                        li_max  :   lmax(LISTE)                         ,
+                        h_struct                                       
+                    ],
+
+		    /* go thru LISTE and check every entry; counter is b  */
+                unless b > li_lgth do (
+                    flag    : false         ,
+                    a       : 0             ,
+                    /* inner cycle thru nclasses-list to check if and where to count; counter is a */
+                    unless ( flag or a >= nc_lgth ) do (
+                        a : a + 1,
+                        if (  LISTE[b]>= first(nclasses[a]) and LISTE[b] <= last(nclasses[a])  ) 
+                            then flag : true
+                    ),
+
+                    /* only if LISTE[b] entry falls into a bin count it */ 
+                    if flag 
+                        then class[a] : class[a] + 1  ,
+                    b : b + 1
+                ),
+
+			/* now count the matches inside the classes --> redefine li_lgth */
+                li_lgth : sum(class[a],a,1,nc_lgth),
+                if is(equal(li_lgth, 0))    then (
+                    error("histogram_ext: Nothing counted - giveing up")
+                )                                                                       ,
+                h_struct: new(  histogram_structure (   
+                                                        makelist([0,0],a,1,nc_lgth)     ,
+                                                        makelist(0,a,1,nc_lgth)         ,
+                                                        makelist(0,a,1,nc_lgth)         ,
+                                                        makelist(0,a,1,nc_lgth)         ,
+                                                        makelist(0,a,1,nc_lgth)         ,
+                                                        ['LIST_MIN  = li_min        ,
+                                                         'LIST_MAX  = li_max        , 
+                                                         'CLASS_CNT = li_lgth       , 
+                                                         'CLASS_MIN = 0             , 
+                                                         'CLASS_MAX = 0             , 
+                                                         'CLASS_NO  = nc_lgth       ]
+                                                    )   
+                ),
+                for a:1 thru nc_lgth do(
+                    h_struct@bounds[a]   	    :   [first(nclasses[a]), last(nclasses[a])] 		,
+                    h_struct@distance[a]    	:   (last(nclasses[a]) - first(nclasses[a]))		,
+                    h_struct@count[a]   	    :   class[a]                                		,
+                    h_struct@mass_fraction[a]	:   class[a]/li_lgth                        
+                ),
+
+                for a:1 thru nc_lgth do(
+                    if  h_struct@distance[a] > 0 then ( 
+                       h_struct@area_fraction[a] :   h_struct@mass_fraction[a] / h_struct@distance[a]
+                    )
+                    else (  
+                        h_struct@area_fraction[a]  : 0 
+                    )
+                ),
+                h_struct@service[4]     :   'CLASS_MIN = lmin(flatten(args(h_struct@bounds)))       ,
+                h_struct@service[5]     :   'CLASS_MAX = lmax(flatten(args(h_struct@bounds)))       ,
+
+			/* Integral of area_fraction should equal to 1 */
+                area_all                :   lsum(a,a,h_struct@area_fraction)                        ,
+                h_struct@area_fraction  :   map(lambda([a], a / area_all ), h_struct@area_fraction) ,
+
+                return(h_struct)      
+            )
+        ) 
+    else (
+        return(false)
+    )
+)$
+
+histogram_plot_processing([description])	:=(
+    block(
+        [
+            STRUCT      : first(description)    ,
+            li_lgth     : 0                     ,
+            i           : 0                     ,
+            height      : []                    ,
+            name_yaxis  : "mass fraction"       ,
+            name_xaxis  : "value range"         ,
+            c           : []                    ,
+            lowest      : 0                     ,
+            highest     : 0                     ,
+            drawopts    : []                    , 
+            localopts   : []                    
+        ],
+
+        lowest          : rhs(STRUCT@service[4])                ,
+        highest         : rhs(STRUCT@service[5])                ,
+        li_lgth         : rhs(STRUCT@service[6])                ,
+
+        [drawopts, localopts]   :   extract_options(description, 'area, 'mass, 'count),
+
+        if length(localopts) > 1   
+            then  localopts : last(localopts)                   ,
+
+        if localopts = [] or localopts = ['count] 
+        then    (
+                height      : STRUCT@count                      ,
+                name_yaxis  : "absolute counts"
+                ) 
+        elseif args(localopts) = ['mass]
+        then (
+                height      : STRUCT@mass_fraction              ,
+                name_yaxis  : "mass fraction"
+        ) 
+        elseif args(localopts) = ['area]
+        then (
+                height      : copylist(STRUCT@area_fraction)    ,
+                name_yaxis  : "area normalized fraction"
+             )
+        else (
+                height      : STRUCT@count                      ,
+                name_yaxis  : "absolute counts",
+                error("histogram_plot_processing: no graph option found: ", localopts)
+             ),
+        name_xaxis          : "value range"                     ,
+
+        if localopts = ['area] then (
+            for i:1 thru li_lgth do (
+                if equal(height[i], 0) and STRUCT@mass_fraction[i] > 0 then (
+                    height[i]   :   STRUCT@mass_fraction[i]
+                )
+            ),
+            c:  makelist(
+                [   (STRUCT@bounds[i][1] + STRUCT@bounds[i][2]) / 2 ,
+                    height[i]                                       ,
+                    STRUCT@distance[i]                              ],
+                i,1, li_lgth
+            )
+        ) 
+        else (
+        c:  makelist(
+                [   (STRUCT@bounds[i][1] + STRUCT@bounds[i][2]) / 2 ,
+                    height[i]                                       ,
+                    STRUCT@distance[i]                              ],
+            i,1, li_lgth
+            )
+        ),
+        if length(drawopts) >1 then 
+            drawopts    :   delete(first(drawopts),drawopts)
+        else
+            drawopts    : []                                        ,
+
+        scen:   [
+xaxis       = true                                                                      ,
+xrange      = float([lowest - abs(lowest * 5/100), highest + abs( highest * 5/100 )])   ,
+yrange      = float([0,lmax(height)*120/100])                                           ,
+'key        = concat("total counts:",string( rhs(STRUCT@service[3]) ))                  ,
+[xlabel     = name_xaxis ]                                                              ,
+[ylabel     = name_yaxis ]                                                              ,
+line_type   = solid                                                                     ,
+fill_color  = blue                                                                      ,
+fill_density= 0.6                                                                       ,
+line_width  = 2                                                                         ,
+drawopts                                                                                ,
+apply('bars,c)                                                                                                                                                 
+               ]
+    )   
+)$
+
+/* ---------------------------------------------------------------------*\
+|   usage of bubbles function for plot with package draw
+|
+|   __data_list : a nested list [ [], [], ... ] or matrix 
+|       with following row order:
+|       [ x_n, y_n, radius_n , fill-color_n, border-color_n ] 
+|   fill-color_n, border-color_n take only HTML color code
+|
+|   Options: adding things to description like border = false is 
+|            called before the graphic objects
+|            bubble_line = blue is overriding presets and 
+|                         removes the last colum in __data_list
+\*--------------------------------------------------------------------- */
+
+bubbles ( [description] )  :=  
+block(
+    [
+        M__data , __data_list               ,
+		x__data , y__data					,
+		r__data , color_fill				,
+		bubble_scale:	1					,
+        color_line  :   gray60              ,
+        draw_code   :   [
+                        border = true   ,
+                        nticks = 100
+                        ]                   ,
+        __in, __out :   []
+    ]                                                                   ,
+    
+    __data_list :   pop(description)                                    ,
+    if matrixp( __data_list ) = true    then 
+        M__data :   __data_list
+    else    
+        M__data :   args(__data_list)                                   ,
+
+    if length( description ) > 0 then (
+        [__out,__in]:   extract_options(description, 'bubble_line, 'bubble_scale),
+        if length(__in) >   0  then 
+		while __in # [] do (
+            content : pop( __in )                                   	,
+            if lhs(content) = 'bubble_line   then  (
+				color_line  :   rhs(content)               					,
+				if length(M__data[1])= 5 then M__data: submatrix (M__data, 5)
+			)																,
+			if lhs(content) = 'bubble_scale   then bubble_scale : rhs(content)
+        )                                                               
+	)																	,
+    draw_code   :   append( draw_code, __out )                          ,
+    
+    x__data     :   flatten( args( col( M__data, 1 ) ) )                ,
+    y__data     :   flatten( args( col( M__data, 2 ) ) )                ,
+    r__data     :   flatten( args( col( M__data, 3 ) ) )                ,
+    color_fill  :   flatten( args( col( M__data, 4 ) ) )                ,
+    
+    if length(M__data[1]) >= 5 then
+        color_line  :   flatten( args( col( M__data, 5 ) ) )                
+    else
+        color_line  :   makelist(color_line, i , x__data)               ,
+    
+    for data_nr:1 thru length(x__data)   do
+        if r__data[data_nr] >0 then
+            draw_code   :   append( draw_code, 
+                        [
+                            fill_color  = color_fill[data_nr]                   ,
+                            color       = color_line[data_nr]                   ,
+                            ellipse ( 
+                                x__data[data_nr], y__data[data_nr]   ,
+                                r__data[data_nr], r__data[data_nr]*bubble_scale, 0, 360
+                            )
+                        ] )                                             ,
+    
+    /* draw_code	: 	append( draw_code, __out )   						,*/
+
+    return( draw_code )
+)$
+
+/* ---------------------------------------------------------------------*\
+|   Usage of histogram_bubbles function with package draw
+|
+|   STRUCT : a histogram struct containing the data to be visualized
+|   Options:
+|   fill-color and border-color_n only take HTML color code
+|   (expl: makelist( printf(false,"#~2,'0x~2,'0x~2,'0x",0,0,random(205)+51), i, 10 ))
+|   bubble_x = 2 is a real number giving the x position on the graph (=1 if not changed)
+|   bubble_x_label = "text" text printed at location of bubble_x    \!/not yet done\!/
+|   bubble_fill = [list with HTML color code] ... length = to STRUCT@service[6]
+|   bubble_line = [list with HTML color code] ... length = to STRUCT@service[6]
+|
+|	example:
+|   STRCUT: histogram_ext( 
+|    	makelist( random(30), 200), 
+|    	makelist( [i, i+DELTA], i, 0, 30, DELTA )
+|    )   ,   DELTA=2 $
+|
+|   draw2d(
+|		histogram_bubbles( STRCUT, 'mass, bubble_scale=17 , bubble_fill=green),
+|		xrange=[0.5,1.5],
+|		grid=true
+|	);  
+|
+\*--------------------------------------------------------------------- */
+
+histogram_bubbles  ([description])   :=  
+block(
+    [
+        STRUCT      : pop(description)      ,
+        li_lgth     : 0                     ,
+        bubble_x    : 1                     ,
+        bubble_fill : [blue]                ,
+        bubble_line : [grey40]              ,
+        pos_opts    : []                    ,
+        height      : []                    ,
+        
+        name_yaxis  : "mass fraction"       ,
+        name_xaxis  : ""                    ,
+        content     : []                    ,
+        lowest      : 0                     ,
+        highest     : 0                     ,
+        drawopts    : []                    , 
+        localopts   : []                    
+    ],
+    
+        lowest      : rhs(STRUCT@service[4])                                            ,
+        highest     : rhs(STRUCT@service[5])                                            ,
+        li_lgth     : rhs(STRUCT@service[6])                                            ,
+        [drawopts, localopts]   :   extract_options(description, 'area, 'mass, 'count)  ,
+    
+    if length(localopts) > 1   
+            then  localopts : last(localopts)                                           ,
+    
+    if localopts = [] or localopts = ['mass] 
+        then    (
+                height      : STRUCT@mass_fraction                                    ,
+                name_yaxis  : "mass fraction of bins"
+                ) 
+        elseif args(localopts) = ['count]
+        then (
+                height      : STRUCT@count                                            ,
+                name_yaxis  : "absolute counts"
+        ) 
+        elseif args(localopts) = ['area]
+        then (
+                height      : copylist(STRUCT@area_fraction)                          ,
+                name_yaxis  : "area normalized fraction of bins"
+             )
+        else (
+                height      : STRUCT@mass_fraction                                    ,
+                name_yaxis  : "mass fraction of bins"                                 ,
+                error("histogram_bubbles: no graph option found: ", localopts)
+             )                                                                          ,
+    if length( drawopts ) > 0 then (
+        [drawopts, pos_opts]:   extract_options(
+            drawopts, 'bubble_x, 'bubble_x_label, 'bubble_fill, 'bubble_line ),
+        while pos_opts # [] do (
+            content : pop( pos_opts )                                                  ,
+            if lhs(content) = 'bubble_x_label   then  bubble_x_label : rhs(content) ,
+            if lhs(content) = 'bubble_x         then  bubble_x       : rhs(content) ,
+            if lhs(content) = 'bubble_fill      then  bubble_fill    : rhs(content) ,
+            if lhs(content) = 'bubble_line      then  bubble_line    : rhs(content) 
+        )
+    )                                                                                   ,
+	
+    if listp(bubble_line) # true                then  bubble_line    : [bubble_line]    ,
+	if listp(bubble_fill) # true                then  bubble_fill    : [bubble_fill]    ,
+      
+    if length(bubble_fill) # li_lgth then 
+        bubble_fill: makelist( first(bubble_fill), i, STRUCT@distance )                 ,
+    if length(bubble_line) = 1          then    
+        drawopts: append( drawopts, ['bubble_line = first(bubble_line)] )
+    else if length(bubble_line) # li_lgth    then 
+        bubble_line: makelist( first(bubble_line), i, STRUCT@distance )                 ,
+    
+    content :   [ 
+        makelist( bubble_x      , i,    STRUCT@distance )                       ,
+        makelist( apply("+",i)/2, i,    STRUCT@bounds   )                       ,
+        height                                                                  ,
+        bubble_fill                                                             
+                ]                                                                       ,
+    if length(bubble_line) = li_lgth    then content : append(content, bubble_line)     ,
+    
+    content :   transpose(  apply( matrix, content ) )                                  ,
+    content :   append   ( [content],['ylabel=name_yaxis] , drawopts )                  ,
+	
+    apply( 'bubbles , content )
+)   $
+
+histogram_plot([desc])      :=  draw2d(apply(histogram_plot_processing,desc))$
+
+wxhistogram_plot([desc])    :=  wxdraw2d(apply(histogram_plot_processing,desc))$
+
+
