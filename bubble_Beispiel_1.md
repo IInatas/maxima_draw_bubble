@@ -1,28 +1,9 @@
 <!DOCTYPE html>
 <html lang="">
   <head>
-    <title>bubble_Beispiel_1</title>
-    <meta name="generator" content="wxMaxima"/>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <script type="text/x-mathjax-config">  MathJax.Hub.Config({
-    displayAlign: "left",
-    context: "MathJax",
-    TeX: {TagSide: "left"}
-  })
-</script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.6/MathJax.js?config=TeX-AMS_HTML" async="async">  // A comment that hinders wxWidgets from optimizing this tag too much.
-</script>
-    <link rel="stylesheet" type="text/css" href="bubble_Beispiel_1_htmlimg/bubble_Beispiel_1.css"/>
+        <link rel="stylesheet" type="text/css" href="bubble_Beispiel_1_htmlimg/bubble_Beispiel_1.css"/>
   </head>
   <body>
-    <!-- ************************************************************************** -->
-    <!-- *        Created with wxMaxima version 20.03.1-DevelopmentSnapshot       * -->
-    <!-- ************************************************************************** -->
-    <noscript>
-      <div class="error message">
-        <p>Please enable JavaScript in order to get a 2d display of the equations embedded in this web page.</p>
-      </div>
-    </noscript>
     <p hidden="hidden">\(      \DeclareMathOperator{\abs}{abs}
       \newcommand{\ensuremath}[1]{\mbox{$#1$}}
 \)</p>
