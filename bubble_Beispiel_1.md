@@ -264,15 +264,8 @@
     </table>
     <p>\[\tag{%t13} \]
 </p>
-    <img src="bubble_Beispiel_1_htmlimg/bubble_Beispiel_1_1.png" width="798" style="max-width:90%;" loading="lazy" alt=" (Bild) "/>
-    <br/>
-    <hr/>
-    <p>
-      <small> Created with 
-        <a href="https://wxMaxima-developers.github.io/wxmaxima/">wxMaxima</a>.</small>
-    </p>
-    <small> The source of this Maxima session can be downloaded 
-      <a href="bubble_Beispiel_1_htmlimg/bubble_Beispiel_1.wxmx">here</a>.</small>
+    <img src="bubble_Beispiel_1_htmlimg/bubble_Beispiel_1_1.png" width="798" style="max-width:90%;" loading="lazy" alt=" (Bild) "/>:
   </body>
 </html>
+
 
