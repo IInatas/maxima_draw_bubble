@@ -209,7 +209,7 @@ block(  [
     )
 )$
 
-histogram_plot_processing([description])	:=(
+histogram_draw_processing([description])	:=(
     block(
         [
             STRUCT      : first(description)    ,
@@ -218,7 +218,7 @@ histogram_plot_processing([description])	:=(
             height      : []                    ,
             name_yaxis  : "mass fraction"       ,
             name_xaxis  : "value range"         ,
-            c           : []                    ,
+            content     : []                    ,
             lowest      : 0                     ,
             highest     : 0                     ,
             drawopts    : []                    , 
@@ -252,7 +252,7 @@ histogram_plot_processing([description])	:=(
         else (
                 height      : STRUCT@count                      ,
                 name_yaxis  : "absolute counts",
-                error("histogram_plot_processing: no graph option found: ", localopts)
+                error("histogram_draw_processing: no graph option found: ", localopts)
              ),
         name_xaxis          : "value range"                     ,
 
@@ -262,7 +262,7 @@ histogram_plot_processing([description])	:=(
                     height[i]   :   STRUCT@mass_fraction[i]
                 )
             ),
-            c:  makelist(
+            content:  makelist(
                 [   (STRUCT@bounds[i][1] + STRUCT@bounds[i][2]) / 2 ,
                     height[i]                                       ,
                     STRUCT@distance[i]                              ],
@@ -270,7 +270,7 @@ histogram_plot_processing([description])	:=(
             )
         ) 
         else (
-        c:  makelist(
+        content:  makelist(
                 [   (STRUCT@bounds[i][1] + STRUCT@bounds[i][2]) / 2 ,
                     height[i]                                       ,
                     STRUCT@distance[i]                              ],
@@ -294,7 +294,7 @@ fill_color  = blue                                                              
 fill_density= 0.6                                                                       ,
 line_width  = 2                                                                         ,
 drawopts                                                                                ,
-apply('bars,c)                                                                                                                                                 
+apply('bars,content)                                                                                                                                                 
                ]
     )   
 )$
@@ -319,8 +319,9 @@ block(
         M__data , __data_list               ,
 		x__data , y__data					,
 		r__data , color_fill				,
-		bubble_scale:	1					,
-        color_line  :   gray60              ,
+		bubble_tilt       :	1				,
+		bubble_scale_x    : 1               ,
+        color_line        : gray60          ,
         draw_code   :   [
                         border = true   ,
                         nticks = 100
@@ -335,7 +336,7 @@ block(
         M__data :   args(__data_list)                                   ,
 
     if length( description ) > 0 then (
-        [__out,__in]:   extract_options(description, 'bubble_line, 'bubble_scale),
+        [__out,__in]:   extract_options(description, 'bubble_line, 'bubble_tilt, 'bubble_scale_x),
         if length(__in) >   0  then 
 		while __in # [] do (
             content : pop( __in )                                   	,
@@ -343,7 +344,8 @@ block(
 				color_line  :   rhs(content)               					,
 				if length(M__data[1])= 5 then M__data: submatrix (M__data, 5)
 			)																,
-			if lhs(content) = 'bubble_scale   then bubble_scale : rhs(content)
+			if lhs(content) = 'bubble_tilt    then bubble_tilt    : rhs(content) ,
+			if lhs(content) = 'bubble_scale_x then bubble_scale_x : rhs(content)
         )                                                               
 	)																	,
     draw_code   :   append( draw_code, __out )                          ,
@@ -365,8 +367,9 @@ block(
                             fill_color  = color_fill[data_nr]                   ,
                             color       = color_line[data_nr]                   ,
                             ellipse ( 
-                                x__data[data_nr], y__data[data_nr]   ,
-                                r__data[data_nr], r__data[data_nr]*bubble_scale, 0, 360
+                                x__data[data_nr], y__data[data_nr]  ,
+                                r__data[data_nr]*bubble_scale_x     , 
+                                r__data[data_nr]*bubble_tilt        , 0, 360
                             )
                         ] )                                             ,
     
@@ -394,7 +397,7 @@ block(
 |    )   ,   DELTA=2 $
 |
 |   draw2d(
-|		histogram_bubbles( STRCUT, 'mass, bubble_scale=17 , bubble_fill=green),
+|		histogram_bubbles( STRUCT, 'mass, bubble_tilt=17 , bubble_fill=green),
 |		xrange=[0.5,1.5],
 |		grid=true
 |	);  
@@ -449,10 +452,10 @@ block(
                 name_yaxis  : "mass fraction of bins"                                 ,
                 error("histogram_bubbles: no graph option found: ", localopts)
              )                                                                          ,
-    if length( drawopts ) > 0 then (
+    if length( drawopts ) > 0   then (
         [drawopts, pos_opts]:   extract_options(
             drawopts, 'bubble_x, 'bubble_x_label, 'bubble_fill, 'bubble_line ),
-        while pos_opts # [] do (
+        while pos_opts # []     do (
             content : pop( pos_opts )                                                  ,
             if lhs(content) = 'bubble_x_label   then  bubble_x_label : rhs(content) ,
             if lhs(content) = 'bubble_x         then  bubble_x       : rhs(content) ,
@@ -464,11 +467,11 @@ block(
     if listp(bubble_line) # true                then  bubble_line    : [bubble_line]    ,
 	if listp(bubble_fill) # true                then  bubble_fill    : [bubble_fill]    ,
       
-    if length(bubble_fill) # li_lgth then 
+    if length( bubble_fill ) # li_lgth          then 
         bubble_fill: makelist( first(bubble_fill), i, STRUCT@distance )                 ,
-    if length(bubble_line) = 1          then    
+    if length( bubble_line ) = 1                then    
         drawopts: append( drawopts, ['bubble_line = first(bubble_line)] )
-    else if length(bubble_line) # li_lgth    then 
+    else if length( bubble_line ) # li_lgth     then 
         bubble_line: makelist( first(bubble_line), i, STRUCT@distance )                 ,
     
     content :   [ 
@@ -477,16 +480,16 @@ block(
         height                                                                  ,
         bubble_fill                                                             
                 ]                                                                       ,
-    if length(bubble_line) = li_lgth    then content : append(content, bubble_line)     ,
+    if length(bubble_line) = li_lgth    then content : append( content, bubble_line)    ,
     
     content :   transpose(  apply( matrix, content ) )                                  ,
-    content :   append   ( [content],['ylabel=name_yaxis] , drawopts )                  ,
+    content :   append   ( [content], ['ylabel=name_yaxis] , drawopts )                 ,
 	
     apply( 'bubbles , content )
 )   $
 
-histogram_plot([desc])      :=  draw2d(apply(histogram_plot_processing,desc))$
+histogram_draw([desc])      :=  draw2d(apply(histogram_draw_processing,desc))$
 
-wxhistogram_plot([desc])    :=  wxdraw2d(apply(histogram_plot_processing,desc))$
+wxhistogram_draw([desc])    :=  wxdraw2d(apply(histogram_draw_processing,desc))$
 
 
