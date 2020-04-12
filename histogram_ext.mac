@@ -319,21 +319,22 @@ block(
         M__data , __data_list               ,
 		x__data , y__data					,
 		r__data , color_fill				,
-		bubble_tilt       :	1				,
-		bubble_scale_x    : 1               ,
-        color_line        : gray60          ,
+		_tilt       : 1						,
+		_scale_x    : 1               		,
+        color_line        : gray60			,
         draw_code   :   [
                         border = true   ,
                         nticks = 100
                         ]                   ,
+		content		:	[]					,
         __in, __out :   []
     ]                                                                   ,
-    
+  
     __data_list :   pop(description)                                    ,
     if matrixp( __data_list ) = true    then 
-        M__data :   __data_list
+        M__data :   copymatrix(__data_list)
     else    
-        M__data :   args(__data_list)                                   ,
+        M__data :   transpose(apply( matrix, __data_list))              ,
 
     if length( description ) > 0 then (
         [__out,__in]:   extract_options(description, 'bubble_line, 'bubble_tilt, 'bubble_scale_x),
@@ -344,8 +345,8 @@ block(
 				color_line  :   rhs(content)               					,
 				if length(M__data[1])= 5 then M__data: submatrix (M__data, 5)
 			)																,
-			if lhs(content) = 'bubble_tilt    then bubble_tilt    : rhs(content) ,
-			if lhs(content) = 'bubble_scale_x then bubble_scale_x : rhs(content)
+			if lhs(content) = 'bubble_tilt    then _tilt    : rhs(content) ,
+			if lhs(content) = 'bubble_scale_x then _scale_x : rhs(content)
         )                                                               
 	)																	,
     draw_code   :   append( draw_code, __out )                          ,
@@ -357,9 +358,10 @@ block(
     
     if length(M__data[1]) >= 5 then
         color_line  :   flatten( args( col( M__data, 5 ) ) )                
-    else
-        color_line  :   makelist(color_line, i , x__data)               ,
-    
+    else (
+            color_line  :   makelist(color_line, i , x__data)   
+	)       															,
+
     for data_nr:1 thru length(x__data)   do
         if r__data[data_nr] >0 then
             draw_code   :   append( draw_code, 
@@ -368,13 +370,10 @@ block(
                             color       = color_line[data_nr]                   ,
                             ellipse ( 
                                 x__data[data_nr], y__data[data_nr]  ,
-                                r__data[data_nr]*bubble_scale_x     , 
-                                r__data[data_nr]*bubble_tilt        , 0, 360
+                                r__data[data_nr]*_scale_x     , 
+                                r__data[data_nr]*_tilt        , 0, 360
                             )
                         ] )                                             ,
-    
-    /* draw_code	: 	append( draw_code, __out )   						,*/
-
     return( draw_code )
 )$
 

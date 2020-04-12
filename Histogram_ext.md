@@ -66,50 +66,6 @@ example   : histogram_ext( list_test,
 histogram_draw ( example, fill_color = red )		$
 ```
 
-Categories: TBD
-
-
-
-## Draw extensions
-
-### histogram_draw ( STRUCT , Options )								[Function]
-
-Draws the result from STRUCT according to the given options in a *draw2d* graph and is affected by all options from the *bars* function.
-
-* histogram_draw ( STRUCT )
-* histogram_draw ( STRUCT, type )
-* histogram_draw ( STRUCT, type, bars_options )
-
-The accepted STRUCT is of type “histogram_structure” as delivered by histogram_ext function. 
-
-The possible “type”s are 'area, 'mass, 'count and access the normalized area , the mass fraction and the as counted values from the *histogram_structure*, respectively.
-
-See *histogram_ext* for a complete description and for a complete list of options see also *bars*.
-
-Categories: [Package draw](http://maxima.sourceforge.net/docs/manual/maxima_singlepage.html#Category_003a-Package-draw)
-
-
-
-###bubbles ( LIST )										[Graphics object for Draw2d]
-
-Draws a bubble series in 2D.
-
-* bubbles ( LIST )
-* bubbles ( LIST, Options )
-* bubbles ( MATRIX )
-* bubbles ( MATRIX, Options )
-
-The LIST has to be a nested list containing the x, y coordinates then the radius value and the fill_color 
-[ [x_1, x_2, .., x_n], [y_1, y_2, …, y_n], [r_1, r_2, …, r_n], [fill_color_1, fill_color_2, …, fill_color_n] ] or a LIST with an additional nested list for line_color. The length of all nested lists needs to be the same. 
-
-The following options are recognized:
-
-- bubble_line = line_color for all bubbles (preset = gray60) 
-  See HTML color code or color names in function *color* for package *DRAW*. Here is only one color value possible, for separate color use the extended LIST.
-- bubble_tilt = real positive number (preset = 1) changes the elongation in y direction higher values stretches the bubbles lower values than 1 compress
-- bubble_scale_x = real positive number (preset = 1) changes the elongation in x direction higher values stretches the bubbles lower values than 1 compress. Useful if many bubble colums are drawn in one graph.
-- further options are called before the graphic objects. There effect might be limited, except of global options for the draw2d objects.
-
 ```lisp
 load("histogram_ext.mac")$
 
@@ -135,4 +91,102 @@ FANCY   = makelist(
 
 ![bubble_Beispiel_1](bubble_Beispiel_1.png)
 
+Categories: TBD
+
+
+
+## Draw extensions
+
+### histogram_draw ( STRUCT , Options )								[Function]
+
+Draws the result from STRUCT according to the given options in a *draw2d* graph and is affected by all options from the *bars* function.
+
+* histogram_draw ( STRUCT )
+* histogram_draw ( STRUCT, type )
+* histogram_draw ( STRUCT, type, bars_options )
+
+The accepted STRUCT is of type “histogram_structure” as delivered by histogram_ext function. 
+
+The possible “type”s are 'area, 'mass, 'count and access the normalized area , the mass fraction and the as counted values from the *histogram_structure*, respectively.
+
+```commonlisp
+load("histogram_ext.mac")$
+
+
+
+```
+
+See *histogram_ext* for a complete description and for a complete list of options see also *bars*.
+
 Categories: [Package draw](http://maxima.sourceforge.net/docs/manual/maxima_singlepage.html#Category_003a-Package-draw)
+
+
+
+###bubbles ( LIST )										[Graphics object for Draw2d]
+
+Draws a bubble series in 2D.
+
+* bubbles ( LIST )
+* bubbles ( LIST, Options )
+* bubbles ( MATRIX )
+* bubbles ( MATRIX, Options )
+
+The LIST has to be a nested list containing the x, y coordinates then the radius value and the fill_color 
+[ [x_1, x_2, .., x_n], [y_1, y_2, …, y_n], [r_1, r_2, …, r_n], [fill_color_1, fill_color_2, …, fill_color_n] ] or a LIST with an additional nested list for line_color. The length of all nested lists needs to be the same. 
+
+```commonlisp
+load("histogram_ext.mac")$
+
+/* 
+    All lists need to be of same length.
+    Be aware that there are no negative radii - see example.
+    Bubbles takes nested lists or rectangular tansposed matricies only.
+ */
+FROM    :   0   $
+TO      :   8   $
+DISTANCE:   1/5 $
+atPOINT :   makelist( i, i, FROM , TO, DISTANCE )   $
+list_x  :   makelist( i,        i, atPOINT )        $
+list_y  :   makelist( 1,        i, atPOINT )        $
+list_r  :   makelist( sin(i),   i, atPOINT )        $
+list_RGB:   makelist( 
+              printf(false, "#~2,'0x~2,'0x~2,'0x~2,'0x", 250-i*25, 150, 90, 0), 
+              i, atPOINT 				   ) 		$
+list_LL :   makelist( 
+              printf(false, "#~2,'0x~2,'0x~2,'0x~2,'0x", 110, i*25, 190, 0)   , 
+              i, atPOINT 				   ) 		$
+CONTXT  :   transpose(
+              apply(matrix,
+                [ list_x, list_y+2, list_r, list_RGB, list_LL ]
+                   )					   )		$
+CONTXT  :   [ list_x, list_y+2, list_r, list_RGB, list_LL ]	$
+
+wxdraw2d(
+    points_joined   =   true		,
+    point_size      =   0       	,
+    points([[0,3],[8,3]])    		,
+    bubbles( [list_x, list_y, log(reverse(atPOINT)+1), list_RGB] )	,
+	/* next example shows how to adapt the bubble size to the real function */
+    bubbles( CONTXT, bubble_scale_x = 0.2  ),
+    color           =   blue		,
+    points( atPOINT, sin(atPOINT)+3),
+ 	bubbles( [ list_x, 4+list_y , cos(atPOINT), list_RGB ], 
+			 bubble_line=white )	,   
+    grid=true
+)													$
+```
+
+In case of providing a MATRIX be aware of the transposed orientation, otherwise LIST and MATRIX behave the same (see CONTXT in the example).
+
+![Bubble_Beispiel_2 with Bubbles function](bubble_Beispiel_2.png)
+
+The following options are recognized:
+
+- bubble_line = line_color for all bubbles (preset = gray60) 
+  See HTML color code or color names in function *color* for package *DRAW*. Here is only one color value possible, for separate color use the extended LIST.
+- bubble_tilt = real positive number (preset = 1) changes the elongation in y direction higher values stretches the bubbles lower values than 1 compress. Be aware that using this option changes the drawn values - it is an eye-candy option.
+- bubble_scale_x = real positive number (preset = 1) changes the elongation in x direction higher values stretches the bubbles lower values than 1 compress. Useful if many bubble colums are drawn in one graph. Be aware that using this option changes the drawn values - it is an eye-candy option.
+- further options are called before the graphic objects. There effect might be limited, except of global options for the draw2d objects.
+
+Categories: [Package draw](http://maxima.sourceforge.net/docs/manual/maxima_singlepage.html#Category_003a-Package-draw)
+
