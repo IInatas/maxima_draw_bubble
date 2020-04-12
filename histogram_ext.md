@@ -129,9 +129,9 @@ Categories: [Package draw](http://maxima.sourceforge.net/docs/manual/maxima_sing
 
 Draws a bubble series in 2D
 
-* histogram_bubbles ( STRUCT )
-* histogram_bubbles ( STRUCT, type )
-* histogram_bubbles ( STRUCT, type, bubble_options )
+* histogram_draw ( STRUCT )
+* histogram_draw ( STRUCT, type )
+* histogram_draw ( STRUCT, type, bubble_options )
 
 The accepted STRUCT is of type “*histogram_structure*” as delivered by *“histogram_ext”* function.
 The possible “type”s are 'area, 'mass, 'count and access the normalized area , the mass fraction

@@ -1,0 +1,269 @@
+\input texinfo
+
+@c makeinfo histogram_ext.texi         to make .info
+@c texi2html histogram_ext.texi        to make .html
+@c texi2pdf histogram_ext.texi         to make .pdf
+
+@setfilename histogram_ext.info
+@settitle histogram_ext
+
+@ifinfo 
+@macro var {expr}
+<\expr\>
+@end macro
+@end ifinfo
+
+@dircategory Mathematics/Maxima
+@direntry
+* histogram_ext: (maxima/histogram_ext).           Maxima share package histogram_ext: additional drawing functions for package draw.
+@end direntry
+
+@node Top, Introduction to histogram_ext, (dir), (dir)
+@top
+@menu
+* Introduction to histogram_ext::
+* histogram_ext::
+* histogram_draw::
+* histogram_bubbles::
+* bubbles
+* Function and variable index::
+@end menu
+
+@node Introduction to histogram_ext, descriptive, Top, Top
+@chapter Introduction to histogram_ext
+
+Package @code{histogram_ext} contains user contributed code based on the @code{draw} package.
+
+Package @code{histogram_ext} contains user contributed code based on the @code{draw} package and the @code{descriptive} package. Both packages are loaded automatically when loading histogram_ext.mac and a histogram structure (histogram_structure) will be defined.
+
+The main goal is to provide more options to express statistical data, especially in form of bubble graphs. Therefor it offers a couple of functions to gain histogram distributions from data in list as well as matrix form. This distributions are stored in a structure that can be later accessed in an easy and clean way.
+
+The graphical part offers a basic bubble function as a generic function for @code{draw2d} and an easier function for presenting histogram data in a bubble plot. All function have several options to influence the appearance of the bubbles as well as there position in the graph.
+
+
+@node histogram structures, bubble diagrams, Introduction to histogram_ext, Top
+@chapter  Histogram Extensions
+
+By Marcus Menzel (2020)
+
+Functions for drawing histograms as bars or bubbles graphs in 2D. A function for making histogram structures from data line or rows in matrices for further use.
+
+@deffn {Function} histogram_ext (@var{LIST})
+histogram_ext (@var{LIST}, @var{integer})
+histogram_ext (@var{LIST}, @var{bin-list})
+
+Returns a structure containing the histogram results from @code{LIST}, based on the given options.
+
+Arguments:
+
+@itemize @bullet
+
+@item
+@var{LIST}: can be a flat list of integers, floats or rationals and matrices of rank 1. The length of @code{LIST} must be >2, obvious, otherwise an error is trigged. 
+
+@item
+@var{integer}: sets this number as symmetric bins in between the lowest and highest values from @code{LIST}.
+
+@item
+@var{bin-list}: is a nested list given all numbers in the form [ [low_1, high_1],[low_2,high_2],... ] the bins will be counted accordingly. A zero distance is fine, but the list needs to be sorted in ascending order to make sure no unwanted counting happens. If the classes don't match all list members, the total value in the resulting structure will differ from @code{LIST}.
+
+@end itemize
+
+Providing a @code{LIST} only sets the number of symmetric bin according to an algorithm described by  Freedman and Diaconis  "n the histogram as a density estimator: L_2 theory. " in Zeitschrift für Wahrscheinlichkeitstheorie und verwandte Gebiete.  Band 57, Nr. 4, 1981, S. 453.
+
+The output is a structure of type @emph{histogram_structure} with the internal lists (bounds, distance, count, mass_fraction, area_fraction, service), the last gives the minimal, maximal and total sum of values from the @code{LIST} and further information about @code{LIST}.
+
+Examples:
+@example
+load(“histogram_ext”) 								$
+
+list_test : map( lambda ( [x], (x-50) ),
+				 makelist( random(10000)/100, i, 1, 5000 )
+			)										$
+remvalue( example )									$
+example   : new( histogram_structure )				$
+example   : histogram_ext( list_test )				;
+histogram_draw ( example, 'mass )					$
+example   : histogram_ext( list_test, 40 )			$
+histogram_draw ( example, 'mass )					$
+
+list_bins : [ [0,1],[1,2],[2,3],[4,4],[5,5],
+			  [51/10,55/10],[8.0,9.9]
+			]										$
+remvalue( example )									$
+example   : new( histogram_structure )				$
+example   : histogram_ext( list_test, list_bins )	$
+histogram_draw ( example, 'area )					$
+
+remvalue( example )									$
+example   : new( histogram_structure )				$
+example   : histogram_ext( list_test, 
+                     makelist([i-1,i+1],i,0,14,2) 
+			)										$
+histogram_draw ( example, fill_color = red )		$
+@end example
+
+@example
+load("histogram_ext.mac")									$
+
+STRUCT : histogram_ext(
+    makelist( random(30), 200 ) ,
+    makelist( [i,i+DELTA], i, 0, 30, DELTA )  )   ,DELTA=2 	$
+
+draw2d(
+    histogram_bubbles( STRUCT , 'mass,
+		bubble_tilt = 17,  bubble_fill = green )			,
+    histogram_bubbles( STRUCT2, 'mass, 
+        bubble_x=2, bubble_tilt=17, bubble_fill=FANCY , bubble_line=white ) ,
+    xtics  = { ["HISTROGRAM_{No1}", 1], ["HISTROGRAM_{No2}", 2] },
+    xrange = [ 0.5, 2.5 ],
+    grid   = true
+)   														,   
+STRUCT2 = histogram_ext( makelist( random(30), 200 ) ,     
+						 makelist( [i,i+1], i, 0, 30, 1 ))	,   
+FANCY   = makelist( 
+            printf(false,"#~2,'0x~2,'0x~2,'0x~2,'0x",i*5+60,100,100,0), 
+            i, 0, 30, 1 ) 									$
+@end example
+
+@end deffn
+
+@node  Draw extensions
+@chapter Histogram drawings
+
+By Marcus Menzel (2020)
+
+No known bug, but in case some issue needs to be addressed, please share it on 
+Maxima mailing list.
+
+@deffn {Function} histogram_draw (@var{STRUCT}, @var{options})
+
+Draws the result from @var{STRUCT} according to the given options in a @code{draw2d} graph and is affected by all options from the @code{bars} function.
+
+Options:
+@itemize @bullet
+@item
+histogram_draw ( @var{STRUCT} )
+@item
+histogram_draw ( @var{STRUCT}, @var{type} )
+@item
+histogram_draw ( @var{STRUCT}, @var{type}, @var{bars_options} )
+
+@end itemize
+
+The accepted @var{STRUCT} is of type @emph{histogram_structure} as delivered by @code{histogram_ext} function. 
+
+The possible “@var{type}”s are 'area, 'mass, 'count and access the normalized area , the mass fraction and the as counted values from the @emph{histogram_structure}, respectively.
+
+See @code{histogram_ext} for a complete description and for a complete list of options see also function code{bars} from package @code{draw2d}. In WxMaxima you are able to use @code{wxhistogram_draw()}.
+@end deffn
+
+
+
+@deffn {Function}  histogram_bubbles (@var{STRUCT}, @var{options})
+
+Draws a bubble series in 2D. The purpose of this function is to make it easier for the user to use function bubble with histogram data.
+
+Options:
+@itemize @bullet
+@item
+histogram_bubbles ( @var{STRUCT} )
+@item
+histogram_bubbles ( @var{STRUCT}, @var{type} )
+@item
+histogram_bubbles ( @var{STRUCT}, @var{type}, @var{bars_options} )
+
+@end itemize
+
+The accepted @var{STRUCT} is of type @emph{histogram_structure} as delivered by @code{histogram_ext} function. The possible “type”s are 'area, 'mass, 'count and access the normalized area , the mass fraction and the as counted values from the @emph{histogram_structure}, respectively.
+
+The possible “@var{type}”s are 'area, 'mass, 'count and access the normalized area , the mass fraction and the as counted values from the @emph{histogram_structure}, respectively.
+
+See @code{histogram_ext} for a complete description and for a complete list of options see also function code{bars} from package @code{draw2d}. In WxMaxima you are able to use @code{wxhistogram_draw()}.
+
+@end deffn
+
+
+@deffn {Function}   bubbles (@var{LIST} or @var{MATRIX}, @var{options})
+
+Draws a bubble series in 2D. 
+
+Options:
+@itemize @bullet
+@item
+bubbles ( @var{LIST} )
+@item
+bubbles ( @var{LIST}, @var{options} )
+@item
+bubbles ( @var{MATRIX} )
+@item
+bubbles ( @var{MATRIX}, @var{options} )
+
+@end itemize
+
+The @var{LIST} has to be a nested list containing the x, y coordinates then the radius value and the fill_color [ [x_1, x_2, .., x_n], [y_1, y_2, …, y_n], [r_1, r_2, …, r_n], [fill_color_1, fill_color_2, …, fill_color_n] ] or a @var{LIST} with an additional nested list for line_color. The length of all nested lists needs to be the same. 
+
+@example
+load("histogram_ext.mac")$
+
+/* 
+    All lists need to be of same length.
+    Be aware that there are no negative radii - see example.
+    Bubbles takes nested lists or rectangular tansposed matricies only.
+ */
+FROM    :   0   $
+TO      :   8   $
+DISTANCE:   1/5 $
+atPOINT :   makelist( i, i, FROM , TO, DISTANCE )   $
+list_x  :   makelist( i,        i, atPOINT )        $
+list_y  :   makelist( 1,        i, atPOINT )        $
+list_r  :   makelist( sin(i),   i, atPOINT )        $
+list_RGB:   makelist( 
+              printf(false, "#~2,'0x~2,'0x~2,'0x~2,'0x", 250-i*25, 150, 90, 0), 
+              i, atPOINT 				   ) 		$
+list_LL :   makelist( 
+              printf(false, "#~2,'0x~2,'0x~2,'0x~2,'0x", 110, i*25, 190, 0)   , 
+              i, atPOINT 				   ) 		$
+CONTXT  :   transpose(
+              apply(matrix,
+                [ list_x, list_y+2, list_r, list_RGB, list_LL ]
+                   )					   )		$
+CONTXT  :   [ list_x, list_y+2, list_r, list_RGB, list_LL ]	$
+
+wxdraw2d(
+    points_joined   =   true		,
+    point_size      =   0       	,
+    points([[0,3],[8,3]])    		,
+    bubbles( [list_x, list_y, log(reverse(atPOINT)+1), list_RGB] )	,
+	/* next example shows how to adapt the bubble size to the real function */
+    bubbles( CONTXT, bubble_scale_x = 0.2  ),
+    color           =   blue		,
+    points( atPOINT, sin(atPOINT)+3),
+ 	bubbles( [ list_x, 4+list_y , cos(atPOINT), list_RGB ], 
+			 bubble_line=white )	,   
+    grid=true
+)	
+
+@end example
+
+In case of providing a @var{MATRIX} be aware of the transposed orientation, otherwise @var{LIST} and @var{MATRIX} behave the same (see CONTXT in the example above).
+
+Recognized options:
+@itemize @bullet
+@item
+@code{bubble_line = line_color}  
+for all bubbles (preset = gray60) 
+See HTML color code or color names in function @code{color} for package @code{DRAW}. Here is only one color value possible, for separate color use the extended @var{LIST}.
+@item
+@code{bubble_tilt = real positive number } 
+(preset = 1) changes the elongation in y direction higher values stretches the bubbles lower values than 1 compress. Be aware that using this option changes the drawn values - it is an eye-candy option.
+@item
+@code{bubble_scale_x = real positive number}
+(preset = 1) changes the elongation in x direction higher values stretches the bubbles lower values than 1 compress. Useful if many bubble colums are drawn in one graph. Be aware that using this option changes the drawn values - it is an eye-candy option.
+
+@end itemize
+Further options are called before the graphic objects. There effect might be limited, except of global options for the draw2d objects.
+
+
+
+@end deffn
