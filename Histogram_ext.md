@@ -18,7 +18,7 @@ By Marcus Menzel (2020)
 
 ### histogram_ext ( LIST , Options )											[Function]
 
-Makes a histogram structure of the form histogram_structure. See below for a detailed description of the content of the structure.
+Makes a histogram structure of type “*histogram_structure*”. See below for a detailed description of the content of the structure.
 
 * histogram_ext ( LIST)	
 * histogram_ext ( LIST , integer )
@@ -33,7 +33,7 @@ Providing a LIST and an integer sets this number as symmetric bins in between th
 In case the parameter is a nested list given all numbers in the form [ [low_1, high_1],[low_2,high_2],... ] it will count the bins accordingly. A zero distance is fine, but the list needs to be sorted in ascending order 
 to make sure no unwanted counting happens. If the classes don't match all list members, the total value in the resulting structure will differ from LIST.
 
-The output is a structure of type “histogram_structure” with the internal lists (bounds, distance, count, mass_fraction, area_fraction, service), the last three give the minimal, maximal and total sum of values from the LIST.
+The output is a structure of type “*histogram_structure*” with the internal lists (bounds, distance, count, mass_fraction, area_fraction, service), the last gives the minimal, maximal and total sum of values from the LIST and further information about LIST.
 
 **Example:**
 
@@ -47,7 +47,7 @@ remvalue( example )									$
 example   : new( histogram_structure )				$
 example   : histogram_ext( list_test )				;
 histogram_draw ( example, 'mass )					$
-example   : histogram_ext( list_test, 40 )			;
+example   : histogram_ext( list_test, 40 )			$
 histogram_draw ( example, 'mass )					$
 
 list_bins : [ [0,1],[1,2],[2,3],[4,4],[5,5],
@@ -55,16 +55,26 @@ list_bins : [ [0,1],[1,2],[2,3],[4,4],[5,5],
 			]										$
 remvalue( example )									$
 example   : new( histogram_structure )				$
-example   : histogram_ext( list_test, list_bins )	;
+example   : histogram_ext( list_test, list_bins )	$
 histogram_draw ( example, 'area )					$
 
 remvalue( example )									$
 example   : new( histogram_structure )				$
 example   : histogram_ext( list_test, 
                      makelist([i-1,i+1],i,0,14,2) 
-			)										;
+			)										$
 histogram_draw ( example, fill_color = red )		$
 ```
+
+![image_histogram_draw_1](image_histogram_draw_1.png)
+
+![image_histogram_draw_2](image_histogram_draw_2.png)
+
+![image_histogram_draw_3](image_histogram_draw_3.png)
+
+![image_histogram_draw_4](image_histogram_draw_4.png)
+
+
 
 ```lisp
 load("histogram_ext.mac")$
@@ -91,7 +101,7 @@ FANCY   = makelist(
 
 ![bubble_Beispiel_1](bubble_Beispiel_1.png)
 
-Categories: TBD
+Categories: TBD (description ?? / draw ??)
 
 
 
@@ -109,14 +119,27 @@ The accepted STRUCT is of type “histogram_structure” as delivered by histogr
 
 The possible “type”s are 'area, 'mass, 'count and access the normalized area , the mass fraction and the as counted values from the *histogram_structure*, respectively.
 
-```commonlisp
-load("histogram_ext.mac")$
+See *histogram_ext* for a complete description and for a complete list of options see also function *bars* from package draw2d. In WxMaxima you are able to use wxhistogram_draw().
+
+Categories: [Package draw](http://maxima.sourceforge.net/docs/manual/maxima_singlepage.html#Category_003a-Package-draw)
 
 
 
-```
+### histogram_bubbles ( STRUCT, Options ) [Graphics object f. Draw2d]
 
-See *histogram_ext* for a complete description and for a complete list of options see also *bars*.
+Draws a bubble series in 2D
+
+* histogram_draw ( STRUCT )
+* histogram_draw ( STRUCT, type )
+* histogram_draw ( STRUCT, type, bubble_options )
+
+The accepted STRUCT is of type “*histogram_structure*” as delivered by *“histogram_ext”* function.
+The possible “type”s are 'area, 'mass, 'count and access the normalized area , the mass fraction
+and the as counted values from the histogram_structure, respectively.
+
+The purpose of this function is to make it easier for the user to use function bubble with histogram data.
+
+See *histogram_ext* for a complete description and for a complete list of options see also function *bubbles* from package draw2d. In WxMaxima you are able to use wxhistogram_bubbles().
 
 Categories: [Package draw](http://maxima.sourceforge.net/docs/manual/maxima_singlepage.html#Category_003a-Package-draw)
 
