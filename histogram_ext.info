@@ -93,7 +93,7 @@ File: histogram_ext.info,  Node: Definitions for histogram_ext,  Next: Function 
      'LIST'.
 
      Examples:
-          load(“histogram_ext”) 								$
+          load("histogram_ext") 								$
 
           list_test : map( lambda ( [x], (x-50) ),
           				 makelist( random(10000)/100, i, 1, 5000 )
@@ -293,6 +293,6 @@ Tag Table:
 Node: Top298
 Node: Introduction to histogram_ext574
 Node: Definitions for histogram_ext1778
-Node: Function and variable index11201
+Node: Function and variable index11197
 
 End Tag Table

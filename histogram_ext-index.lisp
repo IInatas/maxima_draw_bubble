@@ -2,9 +2,9 @@
 (let (
 (deffn-defvr-pairs '(
 ; CONTENT: (<INDEX TOPIC> . (<FILENAME> <BYTE OFFSET> <LENGTH IN CHARACTERS> <NODE NAME>))
-("bubbles" . ("histogram_ext.info" 7534 3661 "Definitions for histogram_ext"))
-("histogram_bubbles" . ("histogram_ext.info" 6468 1057 "Definitions for histogram_ext"))
-("histogram_draw" . ("histogram_ext.info" 5600 863 "Definitions for histogram_ext"))
+("bubbles" . ("histogram_ext.info" 7530 3661 "Definitions for histogram_ext"))
+("histogram_bubbles" . ("histogram_ext.info" 6464 1057 "Definitions for histogram_ext"))
+("histogram_draw" . ("histogram_ext.info" 5596 863 "Definitions for histogram_ext"))
 ("histogram_ext" . ("histogram_ext.info" 1996 3598 "Definitions for histogram_ext"))
 ))
 (section-pairs '(

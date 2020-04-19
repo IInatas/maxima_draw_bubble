@@ -68,7 +68,7 @@ The output is a structure of type @emph{histogram_structure} with the internal l
 
 Examples:
 @example
-load(“histogram_ext”) 								$
+load("histogram_ext") 								$
 
 list_test : map( lambda ( [x], (x-50) ),
 				 makelist( random(10000)/100, i, 1, 5000 )
