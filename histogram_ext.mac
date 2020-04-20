@@ -17,8 +17,10 @@ http://www.gnu.org/copyleft/gpl.html */
 
 /* histogram_ext */
 
-/* ================== small change list for _V8 --> _V10 =====================
-added a new histogram based draw type to make it easier 		    ;    30.03.2020 M^2
+/* ================== small change list for _V10 --> _ext =====================
+changed the behavior of function histogram_ext() to accept                  ;    20.04.2020 M^2
+	1 row /col matrices
+added a new histogram based draw type to make it easier                     ;    30.03.2020 M^2
 	to draw histogram results as bubble plots using histogram_ext
 added a new draw type named bubble to make bubble plots of various formes   ;    28.03.2020 M^2
 changed struct according to Robert's comments                               ;    25.06.2016 M^2
@@ -26,36 +28,64 @@ Update function according to descriptive.mac from Mario Rodriguez Riotorto  ;   
 --> implement wx(draw2d) function, improved loading of packages,
     improved code with parameter handling */
 
+    
+/* loading additional libaries */    
 put('histogram_ext, 1, 'version) $
 
 if not get('draw,       'version)  then load("draw")            $
-
 if not get('descriptive,'version)  then load("descriptive")     $
 
 /* check for definition of structure in global structures list, otherwise define it */
-
 if not member (histogram_structure, map (op, structures)) then 
 	defstruct	(  histogram_structure(
 				            bounds, distance, count, mass_fraction, area_fraction, service
               			)
-	)$
+)$
 
-histogram_ext(LISTE, [nclasses]):=
-block(  [ 
-            area_all        : 0                         ,    
-            h_struct      
-        ],
+/*===========================================================================================*
+||   Definition of helper functions 
+\*===========================================================================================*/
+make_matrix_to_list( MATRIX )   :=  block(
+    [
+        MATRIX_intern
+    ],
+    if rank( MATRIX ) > 1   then    
+        MATRIX_intern: transpose(MATRIX)
+    else
+        MATRIX_intern: MATRIX          ,
+        
+    if rank(MATRIX_intern) # 1 then 
+        error("make_matrix_to_list: expecting a one row one col matrix", MATRIX)
+    else
+        return( 
+            flatten(args(MATRIX_intern))
+    )
+)$
+
+
+/*===========================================================================================*
+||   Definition of the functions 
+\*===========================================================================================*/
+	
+histogram_ext(LIST, [nclasses]):=
+block(  
+    [ 
+        area_all        : 0                         ,    
+        h_struct                                    ,
+        LISTE           : []
+    ]                                                                                           ,
 
 /* # check if LIST is processable, here difference to descriptive.mac --> listify LIST # */    
-        if not listoflistsp(LISTE) then
-            if matrixp(LISTE) and rank(LISTE)>1 then
-                error("histogram_ext: In contrast to other descriptive functions only matrix with rank=1 is possible",LISTE)
-            elseif matrixp(LISTE) and list_matrix_entries(LISTE) < 2 then
-                error("histogram_ext: matrix is too short",LISTE)
-            elseif matrixp(LISTE) and length(LISTE) > 1 then
-                LISTE       :   listify(transpose(LISTE))
-            elseif matrixp(LISTE) then
-                LISTE       :   listify(LISTE),
+if listp( LIST )   = true    then    
+    LISTE : LIST
+elseif matrixp( LIST ) = true    then
+    LISTE : make_matrix_to_list( LIST )                                                         ,
+
+if every( identity, map( numberp, LISTE ) ) = false   then
+    error("histogram_ext: expecting pure numbers in LIST as list of one row/col matrix",LISTE)  ,
+if length( LISTE ) < 3     then
+    error("histogram_ext: LIST is too short", LISTE)                                            ,
+            
 
 
 /* # case with simple splitting of the list in approximated nclasses bins # */
@@ -70,6 +100,7 @@ block(  [
                 In: Zeitschrift f??ahrscheinlichkeitstheorie und verwandte Gebiete. 
                 Band 57, Nr. 4, 1981, S. 453?76, doi:10.1007/BF01025868
             */
+            print(LISTE),
             distance    	:   2* ( quantil_3 - quantil_1 ) / length(LISTE)^(1/3)  		,
             nclasses    	:   floor( ( lmax(LISTE) - lmin(LISTE) ) / distance )   		,
             print("approximated number of bins: ", nclasses)
