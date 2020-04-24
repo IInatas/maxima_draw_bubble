@@ -61,12 +61,45 @@ make_matrix_to_list( MATRIX )   :=  block(
             flatten(args(MATRIX_intern))
     )
 )$
+/* from package description  */
+extract_options(s,[mo]):=
+  block([ss:[],mmo:[]],
+    for k in s do
+      if member(lhs(k), mo)
+        then mmo: endcons(k,mmo)
+        else ss : endcons(k,ss),
+    [ss,mmo] )$
+
 
 
 /*===========================================================================================*
 ||   Definition of the functions 
 \*===========================================================================================*/
-	
+
+/*===========================================================================================*
+||   FUNCTION: histogram_ext(LIST, [nclasses])
+||   * histogram_ext ( LIST)	
+||   * histogram_ext ( LIST , integer )
+||   * histogram_ext ( LIST, bin-list )
+||   
+||   Returns the histogram of LIST. LIST can be a flat list of integers, floats, rationals or a one row/column matrix are accepted. 
+||   The length of LIST must be >2 otherwise an error is trigged. 
+||   
+||   Providing a LIST only sets the number of symmetric bin according to an algorithm described by  Freedman and Diaconis  
+||   "n the histogram as a density estimator: L_2 theory. " in Zeitschrift f"ur Wahrscheinlichkeitstheorie und verwandte Gebiete.  
+||   Band 57, Nr. 4, 1981, S. 453.   
+||   Providing a LIST and an integer sets this number as symmetric bins in between the lowest and highest values from LIST.
+||   
+||   In case the parameter is a nested list given all numbers in the form [ [low_1, high_1],[low_2,high_2],... ] it will count 
+||   the bins accordingly. A zero distance is fine, but the list needs to be sorted in ascending order to make sure no unwanted 
+||   counting happens. If the classes don't match all list members, the total value in the resulting structure will differ from LIST.
+||   
+||   The output is a structure of type “*histogram_structure*” with the internal lists (bounds, distance, count, mass_fraction,
+||   area_fraction, service), the last gives the minimal, maximal and total sum of values from the LIST and 
+||   further information about LIST.   
+||   
+||   
+\*===========================================================================================*/
 histogram_ext(LIST, [nclasses]):=
 block(  
     [ 
@@ -75,17 +108,15 @@ block(
         LISTE           : []
     ]                                                                                           ,
 
-/* # check if LIST is processable, here difference to descriptive.mac --> listify LIST # */    
-if listp( LIST )   = true    then    
-    LISTE : LIST
-elseif matrixp( LIST ) = true    then
-    LISTE : make_matrix_to_list( LIST )                                                         ,
+/* # check if LIST is processable, here difference to descriptive.mac --> listify LIST # */   
 
-if every( identity, map( numberp, LISTE ) ) = false   then
+if listp( LIST ) = true         then         LISTE : LIST
+elseif matrixp( LIST ) = true   then         LISTE : make_matrix_to_list( LIST )                ,
+
+if every( identity, map( NIL_o_numberp, LISTE ) ) = false   then
     error("histogram_ext: expecting pure numbers in LIST as list of one row/col matrix",LISTE)  ,
 if length( LISTE ) < 3     then
     error("histogram_ext: LIST is too short", LISTE)                                            ,
-            
 
 
 /* # case with simple splitting of the list in approximated nclasses bins # */
@@ -97,10 +128,9 @@ if length( LISTE ) < 3     then
             /* 
                 Estimation of number of classes after Freedman und Diaconis  
                 "n the histogram as a density estimator: L_2 theory. "
-                In: Zeitschrift f??ahrscheinlichkeitstheorie und verwandte Gebiete. 
-                Band 57, Nr. 4, 1981, S. 453?76, doi:10.1007/BF01025868
+                In: Zeitschrift f?r Wahrscheinlichkeitstheorie und verwandte Gebiete. 
+                Band 57, Nr. 4, 1981, S. 453, doi:10.1007/BF01025868
             */
-            print(LISTE),
             distance    	:   2* ( quantil_3 - quantil_1 ) / length(LISTE)^(1/3)  		,
             nclasses    	:   floor( ( lmax(LISTE) - lmin(LISTE) ) / distance )   		,
             print("approximated number of bins: ", nclasses)

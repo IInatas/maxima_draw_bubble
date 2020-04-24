@@ -1,0 +1,186 @@
+ratprint    :   false   $
+(if ?mget (histogram_ext, ?mexpr) = false
+   then load ("/home/marcus/Dokumente/Computer/Wxmaxima_Ordner/Eigene_Projekte/Bubbles/histogram_ext.mac"),
+ 0);
+
+0;
+
+/* data can be: list, one row matrix, one column matrix */
+
+block ([xx, h1, h2, h3],
+       xx: makelist (random (400) / 4.0, 100),
+       h1: histogram_ext (xx),
+       h2: histogram_ext (matrix (xx)),
+       h3: histogram_ext (transpose (matrix (xx))),
+       h1 = h2 and h2 = h3);
+
+true;
+
+/* nclasses (default: 10) can be:
+   number of bins,
+   or [class_min, class_max, nclasses],
+   or [class_min, class_max],
+   or {min_1, min_2, min_3, ...},
+   or a symbol, 'fd, 'scott, or 'sturges
+ */
+
+(find_expr (o, e) := sublist (args (e), lambda ([a], not atom(a) and op(a) = o)),
+ find_bars (e) := block ([b: find_expr ('bars, e)], if b # [] then b[1]),
+ 0);
+
+0;
+
+block ([xx, h1, h2],
+       xx: makelist (random (400) / 4.0, 128),
+       h1: histogram_description (xx),
+       h2: histogram_description (xx, nclasses = 10),
+       is (h1 = h2));
+
+true;
+
+histogram_description (
+    makelist (random (400) / 4.0, 128)
+);
+
+block ([xx, h],
+       xx: makelist (random (400) / 4.0, 100),
+       h: histogram_description (xx, nclasses = 17),
+       length (find_bars (h)));
+
+17;
+
+block ([xx, h],
+       xx: makelist (random (400) / 4.0, 100),
+       h: histogram_description (xx, nclasses = [43, 85, 13]),
+       length (find_bars (h)));
+
+13;
+
+block ([xx, h],
+       xx: makelist (random (400) / 4.0, 100),
+       h: histogram_description (xx, nclasses = [43, 85]),
+       length (find_bars (h)));
+
+10;
+
+block ([xx, h],
+       xx: makelist (random (400) / 4.0, 100),
+       S: setify (primes (2, 100)),
+       h: histogram_description (xx, nclasses = S),
+       length (find_bars (h)));
+
+''(length (S) - 1);
+
+(xx:makelist(i/4.0, i, 0, 400), 0);
+
+0;
+
+histogram_description (xx, nclasses = 'scott);
+
+[[], xrange = [- 6.25, 106.25], yrange = [- 2.55, 53.55], [], 
+bars([6.25, 51.0, 12.5], [18.75, 50.0, 12.5], [31.25, 50.0, 12.5], 
+[43.75, 50.0, 12.5], [56.25, 50.0, 12.5], [68.75, 50.0, 12.5], 
+[81.25, 50.0, 12.5], [93.75, 50.0, 12.5])];
+
+histogram_description (xx, nclasses = 'fd);
+
+[[], xrange = [- 6.25, 106.25], yrange = [- 2.55, 53.55], [], 
+bars([6.25, 51.0, 12.5], [18.75, 50.0, 12.5], [31.25, 50.0, 12.5], 
+[43.75, 50.0, 12.5], [56.25, 50.0, 12.5], [68.75, 50.0, 12.5], 
+[81.25, 50.0, 12.5], [93.75, 50.0, 12.5])];
+
+histogram_description (xx, nclasses = 'sturges);
+
+[[], xrange = [- 5.0, 105.0], yrange = [- 2.05, 43.05], [], 
+bars([5.0, 41.0, 10.0], [15.0, 40.0, 10.0], [25.0, 40.0, 10.0], 
+[35.0, 40.0, 10.0], [45.0, 40.0, 10.0], [55.0, 40.0, 10.0], 
+[65.0, 40.0, 10.0], [75.0, 40.0, 10.0], [85.0, 40.0, 10.0], 
+[95.0, 40.0, 10.0])];
+
+/*    <frequency> (default, 'absolute'): indicates the scale of the
+   ordinates.  Possible values are: 'absolute', 'relative',
+   'percent', and 'density'.  With 'density', the histogram area
+   has a total area of one.
+ */
+
+block ([xx, h1, h2],
+       xx: makelist (random (400) / 4.0, 128),
+       h1: histogram_description (xx),
+       h2: histogram_description (xx, frequency = 'absolute),
+       is (h1 = h2));
+
+true;
+
+block ([xx, h],
+       xx: makelist (random (400) / 4.0, 128),
+       h: histogram_description (xx, frequency = 'absolute),
+       block ([b: find_bars (h)], lsum (n, n, maplist (second, b))));
+
+128.0;
+
+block ([xx, h],
+       xx: makelist (random (400) / 4.0, 64),
+       h: histogram_description (xx, frequency = 'relative),
+       block ([b: find_bars (h)], lsum (n, n, maplist (second, b))));
+
+1.0;
+
+block ([xx, h],
+       xx: makelist (random (400) / 4.0, 256),
+       h: histogram_description (xx, frequency = 'percent),
+       block ([b: find_bars (h)], lsum (n, n, maplist (second, b))));
+
+100.0;
+
+block ([xx, h],
+       xx: makelist (random (400) / 4.0, 128),
+       h: histogram_description (xx, frequency = 'density),
+       lsum (b[2]*b[3], b, args (find_bars (h))));
+
+1.0;
+
+/*    <htics> (default, 'auto'): format of the histogram tics.
+   Possible values are: 'auto', 'endpoints', 'intervals', or a
+   list of labels.
+ */
+
+block ([xx, h1, h2],
+       xx: makelist (random (400) / 4.0, 128),
+       h1: histogram_description (xx),
+       h2: histogram_description (xx, htics = 'auto),
+       is (h1 = h2));
+
+true;
+
+block ([xx, h],
+       xx: makelist (random (400) / 4.0, 128),
+       h: histogram_description (xx, htics = 'auto),
+       assoc ('xtics, find_expr ("=", h)));
+
+false;
+
+block ([xx, h],
+       xx: makelist (random (400) / 4.0, 128),
+       tics_set: {3.0, 13.0, 33.0, 66.0, 99.0},
+       h: histogram_description (xx, htics = 'endpoints, nclasses = tics_set),
+       assoc ('xtics, find_expr ("=", h)));
+
+''tics_set;
+
+block ([xx, h],
+       xx: makelist (random (400) / 4.0, 128),
+       tics_set: { 10.0, 20.0, 40.0, 80.0, 90.0, 95.0 },
+       h: histogram_description (xx, htics = 'intervals, nclasses = tics_set),
+       assoc ('xtics, find_expr ("=", h)));
+
+{["(20.0,40.0]", 30.0], ["(40.0,80.0]", 60.0], ["(80.0,90.0]", 85.0], ["(90.0,95.0]", 92.5], ["[10.0,20.0]", 15.0]};
+
+block ([xx, h],
+       xx: makelist (random (400) / 4.0, 128),
+       tics_list: ["A", "B", "C", "D", "E"],
+       h: histogram_description (xx, htics = tics_list, nclasses = tics_set),
+       assoc ('xtics, find_expr ("=", h)));
+
+{["A", 15.0], ["B", 30.0], ["C", 60.0], ["D", 85.0], ["E", 92.5]};
+
+
