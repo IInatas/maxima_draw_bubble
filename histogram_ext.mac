@@ -62,7 +62,7 @@ make_matrix_to_list( MATRIX )   :=  block(
     )
 )$
 /* from package description  */
-extract_options(s,[mo]):=
+extract_options (s,[mo]):=
   block([ss:[],mmo:[]],
     for k in s do
       if member(lhs(k), mo)
@@ -100,12 +100,13 @@ extract_options(s,[mo]):=
 ||   
 ||   
 \*===========================================================================================*/
-histogram_ext(LIST, [nclasses]):=
+histogram_ext(LIST, [Options]):=
 block(  
     [ 
         area_all        : 0                         ,    
         h_struct                                    ,
-        LISTE           : []
+        LISTE           : []                        ,
+        nclasses		: []
     ]                                                                                           ,
 
 /* # check if LIST is processable, here difference to descriptive.mac --> listify LIST # */   
@@ -132,8 +133,8 @@ if length( LISTE ) < 3     then
                 Band 57, Nr. 4, 1981, S. 453, doi:10.1007/BF01025868
             */
             distance    	:   2* ( quantil_3 - quantil_1 ) / length(LISTE)^(1/3)  		,
-            nclasses    	:   floor( ( lmax(LISTE) - lmin(LISTE) ) / distance )   		,
-            print("approximated number of bins: ", nclasses)
+            nclasses    	:   floor( ( lmax(LISTE) - lmin(LISTE) ) / distance )   		
+            /* print("approximated number of bins: ", nclasses) */
             )
         ) 
         else (
@@ -205,20 +206,19 @@ if length( LISTE ) < 3     then
                     ],
 
 		    /* go thru LISTE and check every entry; counter is b  */
-                unless b > li_lgth do (
+                for content in LISTE do (
                     flag    : false         ,
                     a       : 0             ,
                     /* inner cycle thru nclasses-list to check if and where to count; counter is a */
                     unless ( flag or a >= nc_lgth ) do (
                         a : a + 1,
-                        if (  LISTE[b]>= first(nclasses[a]) and LISTE[b] <= last(nclasses[a])  ) 
+                        if ( content >= first(nclasses[a]) and content <= last(nclasses[a])  ) 
                             then flag : true
                     ),
 
-                    /* only if LISTE[b] entry falls into a bin count it */ 
+                    /* only if LISTE[b]=content entry falls into a bin count it */ 
                     if flag 
-                        then class[a] : class[a] + 1  ,
-                    b : b + 1
+                        then class[a] : class[a] + 1  
                 ),
 
 			/* now count the matches inside the classes --> redefine li_lgth */
