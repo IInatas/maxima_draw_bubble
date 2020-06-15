@@ -18,6 +18,8 @@ http://www.gnu.org/copyleft/gpl.html */
 /* histogram_ext */
 
 /* ================== small change list for _V10 --> _ext =====================
+added bubble_label's (top/bottom) as well as changed interface compared to	;    15.06.2020 M^2
+	former versions for cleaner option processing							
 changed the behavior of function histogram_ext() to accept                  ;    20.04.2020 M^2
 	1 row /col matrices
 added a new histogram based draw type to make it easier                     ;    30.03.2020 M^2
@@ -61,6 +63,15 @@ make_matrix_to_list( MATRIX )   :=  block(
             flatten(args(MATRIX_intern))
     )
 )$
+
+/* improved working with vectors having NIL inside */
+NIL_o_numberp( ZAHL ) := block(
+    [ ],
+    if numberp(ZAHL) = true 	 then return(true)
+    elseif ZAHL=nil or ZAHL=NIL  then return(true)
+    else return(false)
+)$
+
 /* from package description  */
 extract_options (s,[mo]):=
   block([ss:[],mmo:[]],
@@ -70,7 +81,17 @@ extract_options (s,[mo]):=
         else ss : endcons(k,ss),
     [ss,mmo] )$
 
-
+/* improved rounding function with adjustable number of digits */
+round_to( zahl, [digits] )  :=  block(
+    [   temp    :   0   ,
+        up      :   0   
+    ]                                                   ,
+    if length( digits ) > 0 then up : first( digits )   ,
+    if not numberp( up )    then up : 0                 ,
+    if not integerp( up )   then up : round( up )       ,
+    temp    :   round( zahl * 10^up )                   ,
+    return( temp / 10^up )
+)$
 
 /*===========================================================================================*
 ||   Definition of the functions 
@@ -106,12 +127,13 @@ block(
         area_all        : 0                         ,    
         h_struct                                    ,
         LISTE           : []                        ,
-        nclasses		: []
+        nclasses		: []						,
+        List_intern		: []
     ]                                                                                           ,
 
 /* # check if LIST is processable, here difference to descriptive.mac --> listify LIST # */   
 
-if listp( LIST ) = true         then         LISTE : LIST
+if 		listp ( LIST ) = true   then         LISTE : LIST
 elseif matrixp( LIST ) = true   then         LISTE : make_matrix_to_list( LIST )                ,
 
 if every( identity, map( NIL_o_numberp, LISTE ) ) = false   then
@@ -119,6 +141,11 @@ if every( identity, map( NIL_o_numberp, LISTE ) ) = false   then
 if length( LISTE ) < 3     then
     error("histogram_ext: LIST is too short", LISTE)                                            ,
 
+    print(Options), /* Juhu <--- hier fehlt die Fallunterscheidung  --- ** ach ja, Diagramm braucht auch die Bubbles mechanik ** */
+[ Options, List_intern ]	:   extract_options(
+									Options, nclasses  )										,
+
+if 
 
 /* # case with simple splitting of the list in approximated nclasses bins # */
         if nclasses = [] then (
@@ -355,7 +382,7 @@ fill_color  = blue                                                              
 fill_density= 0.6                                                                       ,
 line_width  = 2                                                                         ,
 drawopts                                                                                ,
-apply('bars,content)                                                                                                                                                 
+apply('bars,content)                     
                ]
     )   
 )$
@@ -472,10 +499,13 @@ block(
         bubble_x    : 1                     ,
         bubble_fill : [blue]                ,
         bubble_line : [grey40]              ,
+        bubble_show	: ['mass]               ,
+        bubble_label: []                    ,
+        bubble_digit: [1]                   ,
         pos_opts    : []                    ,
         height      : []                    ,
         
-        name_yaxis  : "mass fraction"       ,
+        name_yaxis  : ""                    ,
         name_xaxis  : ""                    ,
         content     : []                    ,
         lowest      : 0                     ,
@@ -487,42 +517,29 @@ block(
         lowest      : rhs(STRUCT@service[4])                                            ,
         highest     : rhs(STRUCT@service[5])                                            ,
         li_lgth     : rhs(STRUCT@service[6])                                            ,
-        [drawopts, localopts]   :   extract_options(description, 'area, 'mass, 'count)  ,
     
-    if length(localopts) > 1   
-            then  localopts : last(localopts)                                           ,
-    
-    if localopts = [] or localopts = ['mass] 
-        then    (
-                height      : STRUCT@mass_fraction                                    ,
-                name_yaxis  : "mass fraction of bins"
-                ) 
-        elseif args(localopts) = ['count]
-        then (
-                height      : STRUCT@count                                            ,
-                name_yaxis  : "absolute counts"
-        ) 
-        elseif args(localopts) = ['area]
-        then (
-                height      : copylist(STRUCT@area_fraction)                          ,
-                name_yaxis  : "area normalized fraction of bins"
-             )
-        else (
-                height      : STRUCT@mass_fraction                                    ,
-                name_yaxis  : "mass fraction of bins"                                 ,
-                error("histogram_bubbles: no graph option found: ", localopts)
-             )                                                                          ,
-    if length( drawopts ) > 0   then (
+    if length( description ) > 0   then (
         [drawopts, pos_opts]:   extract_options(
-            drawopts, 'bubble_x, 'bubble_x_label, 'bubble_fill, 'bubble_line ),
+            description, 'bubble_x, 'bubble_x_label, 'bubble_fill, 'bubble_line, 'bubble_label, 'bubble_show ),
         while pos_opts # []     do (
             content : pop( pos_opts )                                                  ,
             if lhs(content) = 'bubble_x_label   then  bubble_x_label : rhs(content) ,
             if lhs(content) = 'bubble_x         then  bubble_x       : rhs(content) ,
             if lhs(content) = 'bubble_fill      then  bubble_fill    : rhs(content) ,
+            if lhs(content) = 'bubble_show      then  bubble_show    : rhs(content) ,
+            if lhs(content) = 'bubble_label     then  bubble_label   : rhs(content) ,
             if lhs(content) = 'bubble_line      then  bubble_line    : rhs(content) 
         )
     )                                                                                   ,
+    if bubble_show = 'area		     then  ( height 		: STRUCT@area_fraction 	 ,
+					                            name_yaxis  : "area normalized fraction of bins"  
+											)											,
+	if bubble_show = 'mass			then  ( height			: STRUCT@mass_fraction 	 ,
+					                            name_yaxis  : "mass fraction of bins"        
+											)											,
+	if bubble_show = 'count			then  ( height 			: STRUCT@count 	 		,
+					                            name_yaxis  : "absolute counts" 
+											)											,
 	
     if listp(bubble_line) # true                then  bubble_line    : [bubble_line]    ,
 	if listp(bubble_fill) # true                then  bubble_fill    : [bubble_fill]    ,
@@ -533,6 +550,21 @@ block(
         drawopts: append( drawopts, ['bubble_line = first(bubble_line)] )
     else if length( bubble_line ) # li_lgth     then 
         bubble_line: makelist( first(bubble_line), i, STRUCT@distance )                 ,
+	
+	if bubble_label = 'top                      then    (
+        localopts:  last( sublist_indices( STRUCT@count, lambda([u], u>0) )  )  ,
+        drawopts :  append( drawopts, [ 
+                        label([ string( float(STRUCT@bounds[ localopts ][2]) ) , 
+                            bubble_x                                        , 
+                            last( STRUCT@bounds[ localopts ])*1.07 ]        ) 
+                    ])                                                          )       ,
+    if bubble_label = 'bottom                   then    (
+        localopts:  first( sublist_indices( STRUCT@count, lambda([u], u>0) )  )  ,
+        drawopts :  append( drawopts, [ 
+                        label([ string( float(  round_to(STRUCT@bounds[ localopts ][1], bubble_digit)  ) ) , 
+                            bubble_x                                        , 
+                            first( STRUCT@bounds[ localopts ])*0.93 ]        ) 
+                    ])                                                          )       ,
     
     content :   [ 
         makelist( bubble_x      , i,    STRUCT@distance )                       ,
