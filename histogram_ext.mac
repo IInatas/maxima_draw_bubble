@@ -128,8 +128,9 @@ block(
         h_struct                                    ,
         LISTE           : []                        ,
         nclasses		: []						,
-        List_intern		: []
-    ]                                                                                           ,
+        list_intern		: []						,
+        bag    			: []
+	]                                                                                           ,
 
 /* # check if LIST is processable, here difference to descriptive.mac --> listify LIST # */   
 
@@ -141,11 +142,57 @@ if every( identity, map( NIL_o_numberp, LISTE ) ) = false   then
 if length( LISTE ) < 3     then
     error("histogram_ext: LIST is too short", LISTE)                                            ,
 
-    print(Options), /* Juhu <--- hier fehlt die Fallunterscheidung  --- ** ach ja, Diagramm braucht auch die Bubbles mechanik ** */
-[ Options, List_intern ]	:   extract_options(
-									Options, nclasses  )										,
+/*  ------------------------------------------------------------------ ** ach ja, Diagramm braucht auch die Bubbles mechanik ** */
+[ Options, list_intern ]	:   extract_options(
+									Options, 'nclasses  )										,
 
-if 
+if 		length(     list_intern ) > 0 				then			bag : rhs(list_intern[1])		,
+
+if 		length(     list_intern ) < 1				then			nclasses : []	
+elseif	numberp( bag ) = true and bag > 0			then			nclasses : bag 
+elseif	listp( bag )   = true and length(bag) = 3	then
+			nclasses : makelist( [i, i+(bag[2]-bag[1])/bag[3]], i, 
+					bag[1], bag[2]-(bag[2]-bag[1])/bag[3], (bag[2]-bag[1])/bag[3] )
+elseif	listp( bag )   = true and length(bag) = 2	then ( block (
+			[
+				distance    :   0                       ,
+                quantil_1   :   quantile(LISTE, 1/4)    ,
+                quantil_3   :   quantile(LISTE, 3/4)
+			]	,
+			distance :   2* ( quantil_3 - quantil_1 ) / length(LISTE)^(1/3)  			,
+			nclasses : 	makelist( [i,i+distance], i, bag[1], bag[2]-distance, distance )
+		) )
+elseif	listp( bag )   = true and length(bag) > 3   then 			nclasses : bag
+elseif	setp( bag )	   = true and length(bag) > 1	then ( block(
+			[
+				my_list 	:  	[]	,
+				my_min		:	0	,
+				my_max		:	1	,
+				distance	:	2	
+			]	,
+			my_list 	:  	sort(listify( bag)) ,
+			my_min		:	first( my_list )	,
+			my_max		:	last ( my_list )	,
+			if my_min = my_max	then error("histogram_ext: >= 2 bin numbers are needed."),
+			distance	:	length( my_list )-1 ,
+			nclasses : 	makelist( [ my_list[i], my_list[i+1] ], i, 1, distance )
+		) )	
+elseif	member( bag, ['fd, 'scott, 'sturges] )		then (
+		if bag = 'fd			then	( /* Robust Freedman - Diaconis method */
+			h: qrange(LISTE),
+            if h = 0	then h: 2 * median(abs(LISTE-median(LISTE))), /* twice median absolute deviation */
+			if h > 0	then nclasses : ceiling(range(LISTE) / (2 * h * length(LISTE)^(-1/3)))
+			else nclasses : 1 
+		)
+		elseif bag = 'scott		then	( /* Scott's method to be applied under Gaussian assumptions */
+			h: 3.5 * std1(LISTE) * length(LISTE)^(-1/3),
+			if h > 0	then nclasses : ceiling(range(LISTE) / h)
+			else nclasses : 1 )
+		elseif bag = 'sturges	then	( /* Sturges' method to be applied under Gaussian assumptions and n < 200 */
+			nclasses :	ceiling(1 + log(length(LISTE)) / 0.6931471805599453) /* <-- log(2) */
+		)
+),
+
 
 /* # case with simple splitting of the list in approximated nclasses bins # */
         if nclasses = [] then (
@@ -163,9 +210,6 @@ if
             nclasses    	:   floor( ( lmax(LISTE) - lmin(LISTE) ) / distance )   		
             /* print("approximated number of bins: ", nclasses) */
             )
-        ) 
-        else (
-            nclasses    	:   first(nclasses)
         ),
 
 /* # symmetric case with simple splitting of the list in nclasses bins # */
